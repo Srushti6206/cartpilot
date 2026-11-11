@@ -7,7 +7,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: "CartPilot | Find your kind of thing",
   description:
-    "A more thoughtful way to discover, compare, and choose. Browse CartPilot's illustrative sample catalog.",
+    "A more thoughtful way to discover, compare, and choose with live Channel3 product listings.",
 };
 
 export default function RootLayout({ children }: Readonly<{ children: ReactNode }>) {

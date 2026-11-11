@@ -19,6 +19,7 @@ interface StoreState {
 interface StoreContextValue extends StoreState {
   cartCount: number;
   addToCart: (productId: string) => void;
+  clearCart: () => void;
   removeFromCart: (productId: string) => void;
   setQuantity: (productId: string, quantity: number) => void;
   toggleCompare: (productId: string) => void;
@@ -126,6 +127,10 @@ export function StoreProvider({ children }: Readonly<{ children: ReactNode }>) {
     }));
   }, []);
 
+  const clearCart = useCallback(() => {
+    updateStore((current) => ({ ...current, cart: [] }));
+  }, []);
+
   const setQuantity = useCallback((productId: string, quantity: number) => {
     updateStore((current) => ({
       ...current,
@@ -160,12 +165,13 @@ export function StoreProvider({ children }: Readonly<{ children: ReactNode }>) {
       ...state,
       cartCount: state.cart.reduce((total, line) => total + line.quantity, 0),
       addToCart,
+      clearCart,
       removeFromCart,
       setQuantity,
       toggleCompare,
       clearCompare,
     }),
-    [addToCart, clearCompare, removeFromCart, setQuantity, state, toggleCompare],
+    [addToCart, clearCart, clearCompare, removeFromCart, setQuantity, state, toggleCompare],
   );
 
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;

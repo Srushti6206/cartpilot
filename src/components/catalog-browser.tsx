@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import {
@@ -13,42 +13,53 @@ import {
 } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
 import { sampleProducts } from "@/lib/sample-products";
+import type { Product } from "@/types/product";
 
 const categories = ["All finds", "Audio", "Home", "Tech", "Everyday"];
 
 export function CatalogBrowser() {
   const [query, setQuery] = useState("");
-  const [submittedQuery, setSubmittedQuery] = useState("");
+  const [submittedQuery, setSubmittedQuery] = useState("everyday essentials");
   const [category, setCategory] = useState("All finds");
   const [sort, setSort] = useState("curated");
   const [maxPrice, setMaxPrice] = useState("any");
+  const [products, setProducts] = useState<Product[]>([]);
+  const [status, setStatus] = useState<"loading" | "ready" | "error">("ready");
+  const [error, setError] = useState("");
 
-  const products = useMemo(() => {
-    const normalizedQuery = submittedQuery.trim().toLowerCase();
-    const filtered = sampleProducts.filter((product) => {
-      const matchesCategory =
-        category === "All finds" || product.category === category;
-      const matchesQuery =
-        !normalizedQuery ||
-        `${product.title} ${product.brand} ${product.category} ${product.description}`
-          .toLowerCase()
-          .includes(normalizedQuery);
-      const matchesPrice =
-        maxPrice === "any" || product.price.amount <= Number(maxPrice);
-      return matchesCategory && matchesQuery && matchesPrice;
-    });
-    if (sort === "price-low") {
-      return filtered.toSorted((a, b) => a.price.amount - b.price.amount);
+  async function loadProducts(searchQuery: string, priceFilter = maxPrice) {
+    setStatus("loading");
+    setError("");
+    try {
+      const response = await fetch("/api/products/search", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          query: searchQuery,
+          maxPrice: priceFilter === "any" ? undefined : Number(priceFilter),
+        }),
+      });
+      const payload = await response.json() as { products?: Product[]; error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Could not load live products.");
+      setProducts(payload.products ?? []);
+      setStatus("ready");
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load live products.");
+      setStatus("error");
     }
-    if (sort === "rating") {
-      return filtered.toSorted((a, b) => b.rating - a.rating);
-    }
-    return filtered;
-  }, [category, maxPrice, sort, submittedQuery]);
+
+  }
+
+  const visibleProducts = sort === "price-low"
+    ? products.toSorted((a, b) => a.price.amount - b.price.amount)
+    : sort === "rating"
+      ? products.toSorted((a, b) => (b.rating ?? 0) - (a.rating ?? 0))
+      : products;
 
   const handleSearch = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setSubmittedQuery(query);
+    void loadProducts(query);
   };
 
   return (
@@ -61,7 +72,7 @@ export function CatalogBrowser() {
           <form className="discover-search" onSubmit={handleSearch}>
             <Search size={19} strokeWidth={1.8} aria-hidden="true" />
             <input
-              aria-label="Search the sample catalog"
+              aria-label="Search live products"
               onChange={(event) => setQuery(event.target.value)}
               placeholder="Try “something for slow Sunday mornings”"
               value={query}
@@ -75,8 +86,9 @@ export function CatalogBrowser() {
                 key={hint}
                 onClick={() => {
                   setQuery(hint === "under $100" ? "" : hint);
-                  setSubmittedQuery(hint === "under $100" ? "" : hint);
+                  setSubmittedQuery(hint === "under $100" ? "everyday essentials" : hint);
                   if (hint === "under $100") setMaxPrice("100");
+                  void loadProducts(hint === "under $100" ? "everyday essentials" : hint);
                 }}
                 type="button"
               >
@@ -101,7 +113,7 @@ export function CatalogBrowser() {
           <div className="hero-art-note"><small>THE SLOW LIST</small><span>A few things<br />worth keeping.</span><i>01 — 04</i></div>
           <div className="hero-art-orbit"><span /><span /><span /></div>
         </div>
-        <span className="hero-bottom-note">Illustrative sample catalog · products &amp; prices are not live listings</span>
+        <span className="hero-bottom-note">Demo artwork · live Channel3 listings appear below</span>
       </section>
 
       <section className="catalog-section" aria-labelledby="trending-title">
@@ -113,7 +125,10 @@ export function CatalogBrowser() {
                 aria-pressed={category === item}
                 className={`category-chip${category === item ? " is-active" : ""}`}
                 key={item}
-                onClick={() => setCategory(item)}
+                onClick={() => {
+                  setCategory(item);
+                  void loadProducts(item === "All finds" ? submittedQuery : `${submittedQuery} ${item}`);
+                }}
                 type="button"
               >
                 {item}
@@ -129,14 +144,14 @@ export function CatalogBrowser() {
           <div>
             <div className="section-eyebrow">A GOOD PLACE TO START</div>
             <h2 id="trending-title">{submittedQuery ? `Finds for “${submittedQuery}”` : "Considered, not crowded."}</h2>
-            <p>{submittedQuery ? "Matching items from our clearly marked sample catalog." : "A few popular picks to help you find your footing."}</p>
+            <p>{submittedQuery ? "Matching current Channel3 merchant listings." : "Search the live catalog to find your footing."}</p>
           </div>
           <div className="catalog-tools">
             <label className="select-control">
               <SlidersHorizontal size={14} aria-hidden="true" />
-              <span className="sr-only">Filter by maximum sample price</span>
-              <select aria-label="Filter by maximum sample price" onChange={(event) => setMaxPrice(event.target.value)} value={maxPrice}>
-                <option value="any">Any sample price</option>
+              <span className="sr-only">Filter by maximum live price</span>
+              <select aria-label="Filter by maximum live price" onChange={(event) => { setMaxPrice(event.target.value); void loadProducts(submittedQuery, event.target.value); }} value={maxPrice}>
+                <option value="any">Any live price</option>
                 <option value="100">Under $100</option>
                 <option value="200">Under $200</option>
                 <option value="500">Under $500</option>
@@ -155,24 +170,29 @@ export function CatalogBrowser() {
           </div>
         </div>
 
-        {products.length > 0 ? (
+        {status === "loading" ? (
+          <div className="catalog-empty" role="status"><h3>Finding live products…</h3><p>Channel3 is searching current merchant listings.</p></div>
+        ) : status === "error" ? (
+          <div className="catalog-empty" role="alert"><h3>Live products are unavailable</h3><p>{error}</p><button className="button-outline" onClick={() => void loadProducts(submittedQuery)} type="button">Try again</button></div>
+        ) : products.length > 0 ? (
           <div className="product-grid">
-            {products.map((product, index) => (
+            {visibleProducts.map((product, index) => (
               <ProductCard key={product.id} product={product} priority={index === 0} />
             ))}
           </div>
         ) : (
           <div className="catalog-empty">
             <Search size={22} aria-hidden="true" />
-            <h3>No sample finds for that search</h3>
-            <p>Try a broader phrase or clear your filters. This catalog is only a small development sample.</p>
+            <h3>No live finds for that search</h3>
+            <p>Try a broader phrase or change the price filter.</p>
             <button
               className="button-outline"
               onClick={() => {
                 setQuery("");
-                setSubmittedQuery("");
+                setSubmittedQuery("everyday essentials");
                 setCategory("All finds");
                 setMaxPrice("any");
+                void loadProducts("everyday essentials");
               }}
               type="button"
             >

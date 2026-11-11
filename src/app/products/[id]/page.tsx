@@ -1,13 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
-import { notFound } from "next/navigation";
 import { ArrowLeft, Check, Star } from "lucide-react";
 import { ProductActions } from "@/components/product-actions";
-import { formatPrice, getProduct, sampleProducts } from "@/lib/sample-products";
+import { formatPrice } from "@/lib/sample-products";
+import { getProduct as getLiveProduct } from "@/lib/channel3/service";
 
-export function generateStaticParams() {
-  return sampleProducts.map((product) => ({ id: product.id }));
-}
+export const instant = false;
 
 export default async function ProductDetailsPage({
   params,
@@ -15,28 +13,41 @@ export default async function ProductDetailsPage({
   params: Promise<{ id: string }>;
 }) {
   const { id } = await params;
-  const product = getProduct(id);
-  if (!product) notFound();
+  let product;
+  try {
+    product = await getLiveProduct(id);
+  } catch (error) {
+    return (
+      <div className="page-width detail-page" role="alert">
+        <Link className="back-link" href="/"><ArrowLeft size={14} aria-hidden="true" /> Back to Discover</Link>
+        <div className="catalog-empty">
+          <h1>Live product details are unavailable</h1>
+          <p>{error instanceof Error ? error.message : "Channel3 could not load this product."}</p>
+          <Link className="button-outline" href="/">Return to Discover</Link>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="page-width detail-page">
       <Link className="back-link" href="/"><ArrowLeft size={14} aria-hidden="true" /> Back to Discover</Link>
       <div className="detail-layout">
         <div className="detail-image">
-          <Image alt={`Illustrative sample image for ${product.title}`} fill priority sizes="(max-width: 760px) 100vw, 56vw" src={product.imageUrl} unoptimized />
-          <span className="detail-sample-tag">SAMPLE LISTING · NOT A REAL OFFER</span>
+          <Image alt={product.title} fill priority sizes="(max-width: 760px) 100vw, 56vw" src={product.imageUrl} unoptimized />
+          <span className="detail-sample-tag">LIVE CHANNEL3 LISTING</span>
         </div>
         <div className="detail-copy">
-          <div className="detail-category-row"><span>{product.category}</span><span className="detail-rating"><Star size={13} fill="currentColor" aria-hidden="true" /> {product.rating} <small>({product.reviewCount} sample reviews)</small></span></div>
+          <div className="detail-category-row"><span>{product.category}</span>{product.rating != null && <span className="detail-rating"><Star size={13} fill="currentColor" aria-hidden="true" /> {product.rating.toFixed(1)}{product.reviewCount != null && <small> ({product.reviewCount} reviews)</small>}</span>}</div>
           <h1>{product.title}</h1>
-          <div className="detail-brand">{product.brand} · illustrative demo product</div>
-          <div className="detail-price">{formatPrice(product.price.amount)} <span>sample price</span></div>
+          <div className="detail-brand">{product.brand ?? "Brand unavailable"}</div>
+          <div className="detail-price">{formatPrice(product.price.amount, product.price.currency)} <span>{product.price.currency}</span></div>
           <div className="detail-merchant">Shown with <strong>{product.merchant}</strong></div>
-          <p className="detail-description">{product.description}</p>
-          <div className="detail-colors"><strong>Sample finishes</strong><div>{product.colors.map((color) => <span key={color}>{color}</span>)}</div></div>
+          {product.description && <p className="detail-description">{product.description}</p>}
+          {product.colors?.length ? <div className="detail-colors"><strong>Available colors</strong><div>{product.colors.map((color) => <span key={color}>{color}</span>)}</div></div> : null}
           <ProductActions productId={product.id} />
-          <div className="detail-trust-note"><Check size={14} aria-hidden="true" /> Clearly labeled sample data · no purchase is available</div>
-          <div className="detail-why"><span className="why-icon"><Check size={13} aria-hidden="true" /></span><div><strong>Why it may be worth a look</strong><p>{product.recommendationReason}</p></div></div>
+          <div className="detail-trust-note"><Check size={14} aria-hidden="true" /> Live Channel3 data · PayPal Sandbox checkout is available from your cart</div>
+          {product.recommendationReason && <div className="detail-why"><span className="why-icon"><Check size={13} aria-hidden="true" /></span><div><strong>Why it may be worth a look</strong><p>{product.recommendationReason}</p></div></div>}
         </div>
       </div>
       <section className="specs-section">
@@ -46,16 +57,21 @@ export default async function ProductDetailsPage({
         </div>
       </section>
       <section className="detail-pros-cons">
-        <div><h2>What stands out</h2><ul className="comparison-list pros-list">{product.pros.map((pro) => <li key={pro}><Check size={14} aria-hidden="true" />{pro}</li>)}</ul></div>
-        <div><h2>Worth knowing</h2><ul className="comparison-list cons-list">{product.cons.map((con) => <li key={con}><span>−</span>{con}</li>)}</ul></div>
+        <div><h2>What stands out</h2><ul className="comparison-list pros-list">{product.pros?.map((pro) => <li key={pro}><Check size={14} aria-hidden="true" />{pro}</li>)}</ul></div>
+        <div><h2>Worth knowing</h2><ul className="comparison-list cons-list">{product.cons?.map((con) => <li key={con}><span>−</span>{con}</li>)}</ul></div>
       </section>
-      <div className="detail-data-note">Every listing, merchant, specification, review and price on this page is sample data for interface development only.</div>
+      <div className="detail-data-note">Prices, availability, merchants, and buy links are refreshed from Channel3 when this page loads.</div>
     </div>
   );
 }
 
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const product = getProduct(id);
+  let product;
+  try {
+    product = await getLiveProduct(id);
+  } catch {
+    return { title: "Product | CartPilot" };
+  }
   return { title: product ? `${product.title} | CartPilot` : "Product not found | CartPilot" };
 }

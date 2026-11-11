@@ -23,7 +23,7 @@ export function ProductCard({
       >
         <div className="product-image-wrap">
           <Image
-            alt={`Illustrative sample image for ${product.title}`}
+            alt={product.title}
             className="product-image"
             fill
             priority={priority}
@@ -31,7 +31,7 @@ export function ProductCard({
             src={product.imageUrl}
             unoptimized
           />
-          <span className="sample-image-tag">SAMPLE</span>
+          <span className="sample-image-tag">{product.source === "channel3" ? "LIVE" : "SAMPLE"}</span>
           {product.badge && <span className="product-badge">{product.badge}</span>}
           <span className="product-quick-view">
             View details <ArrowUpRight size={14} aria-hidden="true" />
@@ -41,7 +41,7 @@ export function ProductCard({
       <div className="product-card-info">
         <div className="product-meta-row">
           <span className="product-category">{product.category}</span>
-          <span className="product-rating"><Star size={12} fill="currentColor" aria-hidden="true" /> {product.rating}</span>
+          {product.rating != null && <span className="product-rating"><Star size={12} fill="currentColor" aria-hidden="true" /> {product.rating.toFixed(1)}</span>}
         </div>
         <Link className="product-title" href={`/products/${product.id}`}>
           {product.title}
@@ -49,7 +49,7 @@ export function ProductCard({
         <div className="product-merchant">{product.merchant}</div>
         <div className="product-price-row">
           <span className="product-price">{formatPrice(product.price.amount, product.price.currency)}</span>
-          <span className="price-sample">sample price</span>
+          <span className="price-sample">{product.price.currency}</span>
         </div>
         <div className="product-card-actions">
           <button className="add-cart-button" onClick={() => addToCart(product.id)} type="button">

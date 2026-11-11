@@ -29,11 +29,11 @@ export function ShopShell({ children }: Readonly<{ children: React.ReactNode }>)
       <div className="sample-banner">
         <span className="sample-dot" />
         <span>
-          <strong>Sample catalog</strong>
+          <strong>Live Channel3 catalog</strong>
           <span className="banner-divider">/</span>
-          Illustrative products &amp; prices — not live merchant listings
+          Current listings, prices, and merchant offers
         </span>
-        <span className="sample-banner-right">Demo experience · integrations coming soon</span>
+        <span className="sample-banner-right">Demo experience · PayPal Sandbox</span>
       </div>
 
       <header className="store-header">
@@ -97,7 +97,7 @@ export function ShopShell({ children }: Readonly<{ children: React.ReactNode }>)
           cartpilot<span className="brand-period">.</span>
         </Link>
         <span>Thoughtful discovery, with room to decide.</span>
-        <span className="footer-sample">Demo experience · sample catalog</span>
+        <span className="footer-sample">Demo experience · live Channel3 catalog</span>
       </footer>
 
       <nav className="mobile-tab-bar" aria-label="Mobile navigation">

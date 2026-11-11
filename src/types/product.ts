@@ -14,19 +14,35 @@ export interface Product {
   merchant: string;
   brand?: string;
   category: string;
-  description: string;
+  description?: string;
   imageUrl: string;
-  rating: number;
-  reviewCount: number;
-  colors: string[];
+  rating?: number;
+  reviewCount?: number;
+  colors?: string[];
+  features?: string[];
   specifications: Record<string, string>;
-  pros: string[];
-  cons: string[];
-  recommendationReason: string;
+  pros?: string[];
+  cons?: string[];
+  recommendationReason?: string;
   badge?: string;
+  offers?: ProductOffer[];
+}
+
+export interface ProductOffer {
+  id?: string;
+  url: string;
+  merchant: string;
+  price: {
+    amount: number;
+    currency: string;
+    compareAtAmount?: number;
+  };
+  availability: string;
+  condition?: string;
 }
 
 export interface CartLine {
   productId: string;
   quantity: number;
+  selectedOptions?: Record<string, string>;
 }

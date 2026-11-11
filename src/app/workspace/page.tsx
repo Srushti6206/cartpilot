@@ -1,44 +1,90 @@
 "use client";
 
-import { useMemo, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import Link from "next/link";
 import { ArrowRight, Check, ChevronDown, Info, Send, Sparkles } from "lucide-react";
 import { ProductCard } from "@/components/product-card";
-import { sampleProducts } from "@/lib/sample-products";
+import type { AgentRecommendation, ProductEvaluation, ShoppingAgentResponse } from "@/lib/agent/types";
+import { formatIntentSummary, sanitizeAgentMessage, toggleBudgetPreset } from "@/lib/agent/validation";
+import type { Product } from "@/types/product";
 
 const preferences = ["Long-lasting", "Easy to use", "Thoughtful materials", "Compact"];
 const budgets = ["Under $100", "Under $200", "Under $500"];
+type WorkspaceStatus = "idle" | "loading" | "recommendations" | "clarification" | "empty" | "error";
+type RankedRecommendation = AgentRecommendation & { product: Product; evaluation?: ProductEvaluation };
 
 export default function WorkspacePage() {
-  const [budget, setBudget] = useState("Under $200");
+  const [budget, setBudget] = useState<string | undefined>();
   const [selectedPreferences, setSelectedPreferences] = useState<string[]>([
     "Long-lasting",
     "Easy to use",
   ]);
   const [prompt, setPrompt] = useState("");
-  const [activePrompt, setActivePrompt] = useState("Help me find a few thoughtful everyday essentials.");
+  const [activePrompt, setActivePrompt] = useState("");
+  const [agentMessage, setAgentMessage] = useState("");
+  const [intentSummary, setIntentSummary] = useState("");
+  const [recommendations, setRecommendations] = useState<RankedRecommendation[]>([]);
+  const [status, setStatus] = useState<WorkspaceStatus>("idle");
+  const [error, setError] = useState("");
   const [showBudgetOptions, setShowBudgetOptions] = useState(false);
+  const [lastRequestMessage, setLastRequestMessage] = useState("");
 
-  const results = useMemo(() => {
-    const ceiling = Number(budget.match(/\d+/)?.[0] ?? 500);
-    const normalized = activePrompt.toLowerCase();
-    return sampleProducts.filter((product) => {
-      const categoryMatch =
-        normalized.includes("camera")
-          ? product.category === "Tech"
-          : normalized.includes("light") || normalized.includes("lamp")
-            ? product.id === "arc-table-light"
-            : normalized.includes("audio") || normalized.includes("headphone")
-              ? product.category === "Audio"
-              : true;
-      return categoryMatch && product.price.amount <= ceiling;
-    }).slice(0, 3);
-  }, [activePrompt, budget]);
+  function buildRequestMessage(query: string) {
+    return [
+      `User request:\n${query}`,
+      `Selected preset budget: ${budget ?? "No limit"}.`,
+      selectedPreferences.length
+        ? `Priorities: ${selectedPreferences.join(", ")}.`
+        : "No additional priorities.",
+    ].join("\n");
+  }
+
+  async function loadResults(requestMessage: string) {
+    setStatus("loading");
+    setError("");
+    try {
+      const response = await fetch("/api/agent/shopping", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ message: requestMessage }),
+      });
+      const payload = await response.json() as ShoppingAgentResponse & { error?: string };
+      if (!response.ok) throw new Error(payload.error ?? "Could not load shopping recommendations.");
+
+      const productById = new Map(payload.products.map((product) => [product.id, product]));
+      const evaluationById = new Map(payload.evaluations.map((evaluation) => [evaluation.productId, evaluation]));
+      const rankedRecommendations = [...payload.recommendations]
+        .sort((a, b) => a.rank - b.rank)
+        .flatMap((recommendation) => {
+          const product = productById.get(recommendation.productId);
+          return product
+            ? [{ ...recommendation, product, evaluation: evaluationById.get(recommendation.productId) }]
+            : [];
+        });
+
+      setActivePrompt(requestMessage);
+      setAgentMessage(sanitizeAgentMessage(payload.message));
+      setIntentSummary(formatIntentSummary(payload.intent));
+      setRecommendations(rankedRecommendations);
+      setStatus(
+        payload.status === "clarification"
+          ? "clarification"
+          : payload.status === "empty" || rankedRecommendations.length === 0
+            ? "empty"
+            : "recommendations",
+      );
+    } catch (loadError) {
+      setError(loadError instanceof Error ? loadError.message : "Could not load live products.");
+      setStatus("error");
+    }
+  }
 
   function submitPrompt(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (prompt.trim()) {
-      setActivePrompt(prompt.trim());
+    if (prompt.trim() && status !== "loading") {
+      const requestMessage = buildRequestMessage(prompt.trim());
+      setLastRequestMessage(requestMessage);
+      void loadResults(requestMessage);
       setPrompt("");
     }
   }
@@ -57,9 +103,9 @@ export default function WorkspacePage() {
         <div>
           <div className="section-eyebrow"><Sparkles size={13} aria-hidden="true" /> YOUR SHOPPING BRIEF</div>
           <h1>Let’s find your <em>kind of thing.</em></h1>
-          <p>Tell us what matters. Browse a grounded sample shortlist while the AI connection is still in development.</p>
+          <p>Tell us what matters. Browse a live Channel3 shortlist grounded in current merchant listings.</p>
         </div>
-        <span className="integration-pill"><span /> AI preview · not connected</span>
+        <span className="integration-pill"><span /> AI + live catalog</span>
       </div>
 
       <div className="workspace-grid">
@@ -67,9 +113,9 @@ export default function WorkspacePage() {
           <div className="panel-topline">
             <div className="assistant-identity">
               <span className="assistant-avatar"><Sparkles size={16} aria-hidden="true" /></span>
-              <span><strong>Your shopping partner</strong><small>Preview mode · no AI requests sent</small></span>
+              <span><strong>Your shopping partner</strong><small>Live catalog search · no payment requests sent</small></span>
             </div>
-            <span className="preview-live"><i /> PREVIEW</span>
+            <span className="preview-live"><i /> LIVE</span>
           </div>
 
           <div className="conversation-content">
@@ -77,8 +123,8 @@ export default function WorkspacePage() {
             <div className="assistant-message">
               <span className="assistant-message-icon"><Sparkles size={13} aria-hidden="true" /></span>
               <div>
-                <p>{activePrompt}</p>
-                <small>We’ll use your brief to filter the sample catalog. No AI model is connected yet.</small>
+                <p>{activePrompt || "Tell me what you are looking for and I’ll search the live catalog."}</p>
+                <small>Your request will be evaluated against current Channel3 listings.</small>
               </div>
             </div>
             <div className="conversation-day conversation-day-spaced">A FEW THINGS THAT HELP</div>
@@ -90,12 +136,20 @@ export default function WorkspacePage() {
                     aria-pressed={budget === option}
                     className={budget === option ? "budget-option selected" : "budget-option"}
                     key={option}
-                    onClick={() => setBudget(option)}
+                    onClick={() => setBudget((current) => toggleBudgetPreset(current, option))}
                     type="button"
                   >
                     {budget === option && <Check size={12} aria-hidden="true" />}{option}
                   </button>
                 ))}
+                <button
+                  aria-pressed={budget == null}
+                  className={budget == null ? "budget-option selected" : "budget-option"}
+                  onClick={() => setBudget(undefined)}
+                  type="button"
+                >
+                  {budget == null && <Check size={12} aria-hidden="true" />}No limit
+                </button>
               </div>
             </div>
 
@@ -126,11 +180,11 @@ export default function WorkspacePage() {
               placeholder="Add a detail, like “no plastic”"
               value={prompt}
             />
-            <button aria-label="Update shopping brief" disabled={!prompt.trim()} type="submit">
+            <button aria-label="Update shopping brief" disabled={!prompt.trim() || status === "loading"} type="submit">
               <Send size={16} aria-hidden="true" />
             </button>
           </form>
-          <div className="conversation-disclaimer"><Info size={12} aria-hidden="true" /> Preview mode uses simple catalog filters, not an AI model.</div>
+          <div className="conversation-disclaimer"><Info size={12} aria-hidden="true" /> Live results come from Channel3; this workspace does not process payments.</div>
         </section>
 
         <section className="recommendations-panel" aria-label="Product shortlist">
@@ -138,10 +192,10 @@ export default function WorkspacePage() {
             <div>
               <div className="section-eyebrow">A SHORTLIST FOR YOU</div>
               <h2>Worth a closer look<span>.</span></h2>
-              <p>{results.length} sample finds · based on your budget and brief</p>
+              <p>{recommendations.length} live finds · ranked for your budget and brief</p>
             </div>
             <button aria-expanded={showBudgetOptions} className="recommendation-filter" onClick={() => setShowBudgetOptions(!showBudgetOptions)} type="button">
-              {budget} <ChevronDown size={14} aria-hidden="true" />
+              {budget ?? "No limit"} <ChevronDown size={14} aria-hidden="true" />
             </button>
           </div>
           {showBudgetOptions && (
@@ -151,28 +205,55 @@ export default function WorkspacePage() {
                   {option}{budget === option && <Check size={13} aria-hidden="true" />}
                 </button>
               ))}
+              <button onClick={() => { setBudget(undefined); setShowBudgetOptions(false); }} type="button">
+                No limit{budget == null && <Check size={13} aria-hidden="true" />}
+              </button>
             </div>
           )}
-          <div className="recommendation-reason">
-            <span><Sparkles size={14} aria-hidden="true" /></span>
-            <p><strong>Why these?</strong> Matches are drawn from sample catalog descriptions and your budget. Preferences are shown here but don’t affect ranking until the recommendation engine is connected.</p>
-          </div>
-          <div className="recommendation-list">
-            {results.length ? results.map((product, index) => (
-              <article className="recommendation-item" key={product.id}>
-                <ProductCard product={product} priority={index === 0} />
-                <div className="why-recommended">
-                  <span className="why-icon"><Sparkles size={12} aria-hidden="true" /></span>
-                  <span><strong>A sample match</strong>{product.recommendationReason}</span>
-                </div>
-              </article>
-            )) : (
-              <div className="workspace-no-results">
-                <p>No sample products match this brief and budget together.</p>
-                <button onClick={() => setBudget("Under $500")} type="button">Expand sample budget</button>
+          {status === "idle" && <div className="recommendation-reason" role="status"><p>Submit your brief to get ranked live recommendations.</p></div>}
+          {status === "loading" && <div className="recommendation-reason" role="status"><p>Finding live products and evaluating the best matches…</p></div>}
+          {status === "error" && (
+            <div className="recommendation-reason" role="alert">
+              <p>{error} <button onClick={() => void loadResults(lastRequestMessage)} type="button">Try again</button></p>
+            </div>
+          )}
+          {status === "clarification" && (
+            <div className="recommendation-reason" role="status">
+              <span><Sparkles size={14} aria-hidden="true" /></span>
+              <p><strong>One more detail</strong>{agentMessage}</p>
+            </div>
+          )}
+          {status === "empty" && (
+            <div className="workspace-no-results" role="status">
+              <p>{agentMessage || "No live products match this brief and budget together."}</p>
+              <button onClick={() => { setBudget("Under $500"); }} type="button">Expand budget</button>
+            </div>
+          )}
+          {status === "recommendations" && (
+            <>
+              <div className="recommendation-reason">
+                <span><Sparkles size={14} aria-hidden="true" /></span>
+                <p><strong>{intentSummary}</strong></p>
+                {agentMessage && <p>{agentMessage}</p>}
               </div>
-            )}
-          </div>
+              <div className="recommendation-list">
+                {recommendations.map(({ product, evaluation, reasons, tradeoffs, evidence }, index) => (
+                  <article className="recommendation-item" key={product.id}>
+                    <ProductCard product={product} priority={index === 0} />
+                    <div className="why-recommended">
+                      <span className="why-icon"><Sparkles size={12} aria-hidden="true" /></span>
+                      <div>
+                        <strong>Ranked #{index + 1} · Score {evaluation?.score ?? "—"}/100</strong>
+                        {reasons.length > 0 && <ul>{reasons.map((reason) => <li key={reason}>{reason}</li>)}</ul>}
+                        {tradeoffs.length > 0 && <p><strong>Trade-offs:</strong> {tradeoffs.join(" ")}</p>}
+                        {evidence.length > 0 && <p><strong>Evidence:</strong> {evidence.join(" ")}</p>}
+                      </div>
+                    </div>
+                  </article>
+                ))}
+              </div>
+            </>
+          )}
           <Link className="workspace-compare-link" href="/compare">
             Compare your shortlist <ArrowRight size={15} aria-hidden="true" />
           </Link>

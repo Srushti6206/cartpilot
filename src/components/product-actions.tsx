@@ -12,7 +12,7 @@ export function ProductActions({ productId }: Readonly<{ productId: string }>) {
   return (
     <div className="detail-actions">
       <button className="button-dark" onClick={() => addToCart(productId)} type="button">
-        <ShoppingBag size={15} aria-hidden="true" /> Add to sample cart <ArrowRight size={15} aria-hidden="true" />
+        <ShoppingBag size={15} aria-hidden="true" /> Add to cart <ArrowRight size={15} aria-hidden="true" />
       </button>
       <button
         aria-label={compareFull ? "Comparison full; remove a product before adding this one" : undefined}
