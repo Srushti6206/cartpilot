@@ -1,77 +1,327 @@
-# CartPilot
+# 🛒 CartPilot
+### Stop searching. Start shopping with intent.
 
-CartPilot is a shopping discovery experience for the PayPal AI Hackathon,
-built as one Next.js App Router application with TypeScript and Tailwind CSS.
+**Your AI-powered shopping companion - from natural-language discovery to intelligent recommendations and buyer-approved checkout.**
 
-## Current UI scope
+CartPilot reimagines online shopping with an AI shopping agent that understands what you want, discovers relevant products, evaluates your options, and helps you move from product discovery to checkout.
 
-The app now has separate routes for Discover (`/`), AI Shopping Workspace
-(`/workspace`), Product Comparison (`/compare`), Order History (`/orders`),
-the Cart (`/cart`), and Product Details (`/products/[id]`).
+Instead of endlessly browsing, filtering, and comparing products, simply tell CartPilot what you need.
 
-Discover, product details, the AI Workspace, comparison, and cart display live
-Channel3 product data. The Discover hero uses clearly labeled demo artwork;
-it is not a product listing. Cart and compare selections are saved in local
-storage.
+---
 
-The AI workspace sends shopping briefs to the server-side shopping agent, which
-uses the configured provider and live Channel3 catalog to rank recommendations.
-PayPal Sandbox checkout is available when the server credentials are configured;
-there are no simulated successful payments or sample orders.
+## ✨ Why CartPilot?
 
-## Run locally
+Online shopping gives us thousands of choices, but finding the *right* product is still time-consuming.
 
-Requirements: Node.js 20.9 or later and npm.
+Traditional shopping experiences make users do most of the work:
+- Search using multiple keywords.
+- Apply filters and repeatedly refine results.
+- Compare specifications, prices, and features manually.
+- Decide which product best matches their requirements.
+
+**CartPilot changes the interaction model.**
+
+It transforms shopping from a search-and-filter process into an intent-driven experience.
+
+You describe what you need. CartPilot helps you discover, evaluate, and choose.
+
+## 🚀 What can CartPilot do?
+
+| Feature | Description |
+|---|---|
+| 🧠 AI Shopping Workspace | Describe your shopping requirements in natural language. |
+| 🔎 Live Product Discovery | Discover real product listings using Channel3. |
+| 🎯 Intelligent Recommendations | Rank products against your budget, required features, and preferences. |
+| 📊 Transparent Comparisons | Compare shortlisted products and understand their trade-offs. |
+| 🛍️ Smart Cart | Manage selected products and quantities with refreshed product information. |
+| 💳 PayPal Checkout | Complete buyer-approved transactions through PayPal Sandbox. |
+| 📦 Order History | Review completed demo transactions. |
+| 📱 Responsive Experience | Explore CartPilot through desktop and mobile interfaces. |
+
+### How it works
+
+1. **Describe:** Tell CartPilot what you're looking for, including your budget and preferences.
+2. **Understand:** The AI agent interprets your shopping intent and determines which product information it needs.
+3. **Discover:** Tool calling connects the agent to Channel3 for live product search and product details.
+4. **Evaluate:** A deterministic evaluation engine scores relevant products against your requirements.
+5. **Decide:** Explore ranked recommendations, explanations, and trade-offs.
+6. **Checkout:** Add products to your cart and proceed to buyer-approved PayPal Sandbox checkout.
+
+## 🧠 What makes CartPilot different?
+
+### AI interpretation + deterministic evaluation
+
+We don't rely on an LLM to invent product rankings.
+
+CartPilot separates natural-language understanding from product evaluation.
+
+The AI agent interprets the user's request and coordinates product discovery. Application logic then evaluates the retrieved products using a transparent scoring system.
+
+**Recommendation scoring:**
+
+| Evaluation criterion | Weight |
+|---|---:|
+| Required feature matches | 35 |
+| Currency-aware budget fit | 25 |
+| Preference matches | 15 |
+| Product data completeness | 15 |
+| Category match | 10 |
+| **Total** | **100** |
+
+Unknown product information is treated as unknown, not as a match.
+
+This makes recommendations more explainable and keeps product facts grounded in retrieved catalog data.
+
+## 🏗️ System Architecture
+
+
+## 🏗️ System Architecture
+
+CartPilot combines AI-powered intent understanding, live product discovery, deterministic evaluation, and secure payment processing into one shopping workflow.
+
+```mermaid
+flowchart TB
+    USER(["User"])
+
+    subgraph FRONTEND["Frontend - Next.js · React · TypeScript"]
+        UI["Shopping Interface"]
+        WORKSPACE["AI Shopping Workspace"]
+        COMPARE["Product Comparison"]
+        CART["Shopping Cart"]
+        ORDERS["Order History"]
+    end
+
+    subgraph BACKEND["Backend - Next.js API Routes"]
+        AGENT["AI Shopping Orchestrator"]
+        EVAL["Deterministic Evaluation Engine"]
+        CHECKOUT["Checkout & Cart Validation"]
+        VERIFY["Payment Verification"]
+    end
+
+    subgraph AI["AI Intelligence"]
+        GROQ["Groq Inference API"]
+        MODEL["GPT-OSS-20B"]
+        TOOLS["Tool Calling"]
+    end
+
+    subgraph DISCOVERY["Product Discovery"]
+        C3["Channel3 SDK"]
+        SEARCH["Product Search"]
+        DETAILS["Product Details"]
+        DATA["Live Product Data"]
+    end
+
+    subgraph PAYMENTS["PayPal Developer Platform"]
+        CREATE["Orders API - Create Order"]
+        APPROVE["Buyer Approval"]
+        CAPTURE["Orders API - Capture"]
+    end
+
+    STORAGE[("Browser Local Storage")]
+
+    USER --> UI
+    UI --> WORKSPACE
+    UI --> COMPARE
+    UI --> CART
+
+    WORKSPACE --> AGENT
+    AGENT <--> GROQ
+    GROQ <--> MODEL
+    MODEL <--> TOOLS
+
+    TOOLS --> SEARCH
+    TOOLS --> DETAILS
+    SEARCH --> C3
+    DETAILS --> C3
+    C3 --> DATA
+
+    DATA --> EVAL
+    EVAL --> WORKSPACE
+
+    COMPARE <--> STORAGE
+    CART <--> STORAGE
+    ORDERS <--> STORAGE
+
+    CART --> CHECKOUT
+    CHECKOUT --> CREATE
+    CREATE --> APPROVE
+    APPROVE --> CAPTURE
+    CAPTURE --> VERIFY
+    VERIFY --> ORDERS
+```
+
+
+
+## 🛠️ Built With
+
+### Frontend
+- **Next.js** - App Router and server-side application architecture.
+- **React** - Component-based user interface.
+- **TypeScript** - Type-safe application development.
+- **Tailwind CSS** - Responsive styling.
+
+### AI & Product Discovery
+- **Groq API** - AI inference and tool-calling orchestration.
+- **OpenAI GPT-OSS-20B** (`openai/gpt-oss-20b`) - Natural-language shopping intent interpretation and agent reasoning.
+- **Channel3 SDK** - Live product search and product-detail retrieval.
+- **Deterministic evaluation engine** - Transparent product scoring and recommendation ranking.
+
+### Payments
+- **PayPal Developer Platform** - Sandbox payment integration.
+- **PayPal REST API**
+- **OAuth 2.0**
+- **Orders API v2** - Order creation and payment capture.
+
+## 🔌 Sponsor Integrations
+
+### Channel3 - Live Product Discovery
+
+Channel3 powers CartPilot's product discovery layer.
+
+We use its SDK to retrieve live product listings and product details, allowing the AI shopping workflow to operate on actual catalog information rather than relying exclusively on static demo data.
+
+### PayPal - Buyer-Approved Commerce
+
+PayPal Sandbox powers the checkout experience.
+
+CartPilot uses server-side OAuth authentication and the PayPal Orders API v2 to:
+- Create checkout orders using server-validated cart information.
+- Redirect buyers to PayPal for payment approval.
+- Capture payments only after buyer approval.
+- Verify capture status, amount, and currency.
+- Preserve the cart when checkout is cancelled or unsuccessful.
+
+**The buyer always remains in control of the payment.**
+
+## 🔐 Engineering & Reliability
+
+We designed CartPilot with reliability and clear system boundaries in mind.
+
+- API credentials remain server-side.
+- Product prices are refreshed from Channel3 before checkout.
+- Client-submitted prices and totals are not trusted.
+- Cart validation and payment verification happen server-side.
+- Product-search and product-detail failures are surfaced explicitly.
+- Checkout is blocked when cart information is incomplete or unsupported.
+- Payment confirmation requires successful capture verification.
+- No simulated successful payments or sample orders are presented as real transactions.
+
+## 🧰 Tech Stack at a Glance
+
+| Layer | Technology |
+|---|---|
+| Frontend | Next.js, React, TypeScript |
+| Styling | Tailwind CSS |
+| AI Inference | Groq |
+| AI Model | GPT-OSS-20B |
+| Product Discovery | Channel3 SDK |
+| Payments | PayPal REST API v2 |
+| Authentication | PayPal OAuth 2.0 |
+| Persistence | Browser Local Storage |
+| Testing | Vitest |
+| Deployment | Vercel |
+
+## ⚙️ Run Locally
+
+### Prerequisites
+
+- Node.js 20.9 or later
+- npm
+- Channel3 API key
+- Groq API key
+- PayPal Developer Sandbox credentials (for checkout testing)
+
+### 1. Clone the repository
+
+```bash
+git clone https://github.com/Srushti6206/CartPilot.git
+cd CartPilot
+```
+
+### 2. Install dependencies
 
 ```bash
 npm install
+```
+
+### 3. Configure environment variables
+
+Create a `.env.local` file in the project root.
+
+```env
+# Channel3
+CHANNEL3_API_KEY=your_channel3_api_key
+
+# AI Provider
+GROQ_API_KEY=your_groq_api_key
+GROQ_MODEL=openai/gpt-oss-20b
+
+# Optional Gemini provider
+GEMINI_API_KEY=your_gemini_api_key
+GEMINI_MODEL=your_gemini_model
+
+# PayPal Sandbox
+PAYPAL_CLIENT_ID=your_paypal_sandbox_client_id
+PAYPAL_CLIENT_SECRET=your_paypal_sandbox_secret
+PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com
+```
+
+Groq is used when configured. Gemini remains an optional provider when Groq is not configured. Provider failures do not silently switch providers.
+
+Never expose API credentials through `NEXT_PUBLIC_` variables or commit `.env.local`.
+
+### 4. Start the development server
+
+```bash
 npm run dev
 ```
 
-Create `.env.local` from `.env.example` and set `CHANNEL3_API_KEY` before using live search. The Phase 2A server-side shopping agent uses Groq when `GROQ_API_KEY` is configured; `GROQ_MODEL` defaults to `openai/gpt-oss-20b`. Gemini remains an optional provider when Groq is not configured, using `GEMINI_API_KEY` and `GEMINI_MODEL` (default `gemini-3.8-flash`). Provider failures do not silently switch providers. Do not use `NEXT_PUBLIC_` variables for any credential. Channel3's documented markets currently include the US, Canada, UK, Australia, and supported European markets; India and INR are not listed, so the default demo locale is explicit US/USD. CartPilot never interprets an INR budget as USD.
+Open:
 
-For PayPal Sandbox checkout, set `PAYPAL_CLIENT_ID`, `PAYPAL_CLIENT_SECRET`, and
-`PAYPAL_BASE_URL=https://api-m.sandbox.paypal.com` in `.env.local`. PayPal
-credentials and access tokens stay server-side. The server reloads current
-Channel3 product data, validates the cart, calculates a USD total in integer
-cents, creates a PayPal Orders API v2 `CAPTURE` order, and captures only after
-buyer approval. It verifies capture status, amount, and currency before showing
-an order as paid.
+[http://localhost:3000](http://localhost:3000)
 
-Open [http://localhost:3000](http://localhost:3000).
+## 🧪 Run Checks
 
-## Checks
+Run the following commands to validate the application:
 
 ```bash
-npm run lint
-npm run typecheck
-npm run build
 npm test
+npm run typecheck
+npm run lint
+npm run build
 ```
 
-## Planned integration boundaries
+## 📌 Current Implementation Scope
 
-- **Product data:** Channel3 is the live source for Discover, Workspace, and
-  product details. Search and detail failures are shown explicitly; the app
-  does not silently fall back to sample products. The sample catalog remains
-  only for clearly labeled demo artwork and development fixtures; live
-  recommendations, product details, prices, and merchant data come from Channel3.
-- **Freshness:** local storage stores product IDs, selected options, and
-  quantities only. Cart and comparison views refresh product details, offers,
-  prices, and merchant URLs through Channel3 before displaying them.
-- **AI:** Phase 2A adds a server-only Groq Chat Completions orchestrator with
-  only `search_products` and `get_product_details` tools. Gemini remains an
-  optional provider. Channel3 remains the
-  source of truth for products, while application code deterministically scores
-  budget fit, feature matches, data completeness, and trade-offs. If Gemini is
-  unavailable, the endpoint labels its validated Channel3 shortlist as
-  deterministic rather than presenting it as AI-generated.
-  The transparent score is out of 100: required-feature matches 35,
-  currency-aware budget fit 25, preference matches 15, data completeness 15,
-  and category match 10. Unknown data is reported as unknown and never treated
-  as a match.
-- **Payments:** PayPal Sandbox uses server-side order creation, buyer approval,
-  capture, and verification. Browser-local order history is only a demo
-  convenience; it is not durable or tamper-resistant persistence. Checkout is
-  USD-only, does not represent retailer fulfillment or delivery, and should be
-  presented as a Sandbox demonstration.
+We believe in being transparent about what the current implementation supports.
+
+- **Product marketplace:** Channel3 supplies live product listings and product details. Its documented markets include the US, Canada, UK, Australia, and supported European markets. India/INR is not listed; the current demo uses US/USD. CartPilot does not convert INR budgets into USD.
+- **Demo artwork:** The Discover hero contains clearly labeled demo artwork. It is not represented as a live product listing.
+- **Local persistence:** Cart and comparison selections store product IDs, selected options, and quantities in browser local storage. Product details are refreshed through Channel3.
+- **Order history:** Completed demo order history is browser-local. It is not durable or tamper-resistant server-side persistence.
+- **Payments:** PayPal integration uses Sandbox only. It does not process real payments.
+- **Fulfillment:** PayPal Sandbox checkout demonstrates payment authorization and capture, not retailer order fulfillment, shipping, or delivery.
+
+## 🔮 What's Next?
+
+CartPilot is a starting point for a more capable personal commerce agent.
+
+Our future direction includes:
+
+- Multi-marketplace product discovery.
+- More advanced conversational shopping workflows.
+- Price tracking and deal intelligence.
+- Deeper personalization with user consent.
+- Persistent accounts and cross-device order history.
+- Broader marketplace and payment-region support.
+
+## 💡 Our Vision
+
+We believe the future of commerce should be driven by user intent, not endless searching.
+
+**Less searching. Better decisions. Smarter shopping.**
+
+---
+
+**Built for the PayPal AI Hackathon 2026.**
+
