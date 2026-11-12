@@ -72,85 +72,33 @@ Unknown product information is treated as unknown, not as a match.
 
 This makes recommendations more explainable and keeps product facts grounded in retrieved catalog data.
 
-## 🏗️ System Architecture
 
+## System Architecture
 
-## 🏗️ System Architecture
+CartPilot follows a modular architecture that connects the frontend, AI orchestration, live product discovery, recommendation engine, and payment processing.
 
-CartPilot combines AI-powered intent understanding, live product discovery, deterministic evaluation, and secure payment processing into one shopping workflow.
+| Layer | Technology / Component | Responsibility |
+|---|---|---|
+| Frontend | Next.js, React, TypeScript, Tailwind CSS | User interface, shopping workspace, product discovery, cart and comparison |
+| AI Orchestration | Next.js API Routes | Processes shopping requests and coordinates agent tools |
+| LLM Inference | Groq API - GPT-OSS-20B | Understands natural-language intent and generates tool calls |
+| Product Discovery | Channel3 SDK | Retrieves live product listings and product details |
+| Recommendation Engine | Deterministic scoring engine | Evaluates products using features, budget, preferences, data completeness and category match |
+| Payment Integration | PayPal REST API | Creates orders, handles buyer approval, captures and verifies payments |
+| Payment Environment | PayPal Sandbox | Simulates secure checkout without real-money transactions |
+| Client-side Storage | Browser Local Storage | Maintains cart, comparison selections and order history |
 
-```mermaid
-flowchart TB
-    USER(["User"])
+### Shopping Workflow
 
-    subgraph FRONTEND["Frontend - Next.js · React · TypeScript"]
-        UI["Shopping Interface"]
-        WORKSPACE["AI Shopping Workspace"]
-        COMPARE["Product Comparison"]
-        CART["Shopping Cart"]
-        ORDERS["Order History"]
-    end
+1. **User Input:** User describes their shopping requirements in natural language.
+2. **AI Interpretation:** Groq-powered agent interprets the request and coordinates product discovery.
+3. **Live Discovery:** Channel3 retrieves relevant products and product details.
+4. **Intelligent Ranking:** CartPilot's deterministic scoring engine evaluates and ranks retrieved products.
+5. **Shopping Actions:** Users inspect recommendations, compare products and manage their cart.
+6. **Checkout:** PayPal Sandbox handles buyer approval and payment capture.
+7. **Verification:** CartPilot verifies the captured payment before confirming the order.
 
-    subgraph BACKEND["Backend - Next.js API Routes"]
-        AGENT["AI Shopping Orchestrator"]
-        EVAL["Deterministic Evaluation Engine"]
-        CHECKOUT["Checkout & Cart Validation"]
-        VERIFY["Payment Verification"]
-    end
-
-    subgraph AI["AI Intelligence"]
-        GROQ["Groq Inference API"]
-        MODEL["GPT-OSS-20B"]
-        TOOLS["Tool Calling"]
-    end
-
-    subgraph DISCOVERY["Product Discovery"]
-        C3["Channel3 SDK"]
-        SEARCH["Product Search"]
-        DETAILS["Product Details"]
-        DATA["Live Product Data"]
-    end
-
-    subgraph PAYMENTS["PayPal Developer Platform"]
-        CREATE["Orders API - Create Order"]
-        APPROVE["Buyer Approval"]
-        CAPTURE["Orders API - Capture"]
-    end
-
-    STORAGE[("Browser Local Storage")]
-
-    USER --> UI
-    UI --> WORKSPACE
-    UI --> COMPARE
-    UI --> CART
-
-    WORKSPACE --> AGENT
-    AGENT <--> GROQ
-    GROQ <--> MODEL
-    MODEL <--> TOOLS
-
-    TOOLS --> SEARCH
-    TOOLS --> DETAILS
-    SEARCH --> C3
-    DETAILS --> C3
-    C3 --> DATA
-
-    DATA --> EVAL
-    EVAL --> WORKSPACE
-
-    COMPARE <--> STORAGE
-    CART <--> STORAGE
-    ORDERS <--> STORAGE
-
-    CART --> CHECKOUT
-    CHECKOUT --> CREATE
-    CREATE --> APPROVE
-    APPROVE --> CAPTURE
-    CAPTURE --> VERIFY
-    VERIFY --> ORDERS
-```
-
-
+> **Note:** Cart, comparison selections and order history are maintained in browser Local Storage. PayPal transactions use the Sandbox environment.
 
 ## 🛠️ Built With
 
@@ -321,7 +269,7 @@ We believe the future of commerce should be driven by user intent, not endless s
 
 **Less searching. Better decisions. Smarter shopping.**
 
----
 
-**Built for the PayPal AI Hackathon 2026.**
+
+
 
